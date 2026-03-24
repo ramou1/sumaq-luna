@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sumaq Luna — site institucional
 
-## Getting Started
+Landing page de página única para a marca de pisco premium **Sumaq Luna**. Conteúdo em espanhol, identidade visual escura com dourados e vinho, tipografia clássica (Cinzel, Cormorant Garamond, Great Vibes) e secções com âncoras no cabeçalho.
 
-First, run the development server:
+## Funcionalidades
+
+- Menu fixo com links âncora, logo em `/public/images/logo-sumaq.png` e CTA “Quiero ser embajador”
+- Modais de registro (nome, telefone, e-mail, país) e início de sessão (placeholder até existir backend)
+- Layout responsivo com painéis em vidro (“glass”), moldura dupla fina e paleta definida pela marca
+- Imagens de contexto via Unsplash (configuradas em `next.config.ts`)
+
+## Stack
+
+| Tecnologia   | Versão   |
+|-------------|----------|
+| Next.js     | 16.x     |
+| React       | 19.x     |
+| TypeScript  | 5.x      |
+| Tailwind CSS| 4.x      |
+
+## Requisitos
+
+- Node.js 20+ (recomendado)
+- npm ou pnpm
+
+## Como executar
 
 ```bash
+# Instalar dependências
+npm install
+
+# Servidor de desenvolvimento
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Build de produção
+npm run build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Servidor de produção (após o build)
+npm start
 
-## Learn More
+# Lint
+npm run lint
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Estrutura útil
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+app/
+  components/sumaq-luna-home.tsx   # Landing, cabeçalho, modais e secções
+  globals.css                     # Variáveis de cor, tema Tailwind, utilitários
+  layout.tsx                      # Fontes Google, metadata, lang="es"
+  page.tsx                        # Entrada da página
+public/
+  images/logo-sumaq.png           # Logotipo
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Notas
 
-## Deploy on Vercel
+- **Previews (Open Graph / redes sociais):** define `NEXT_PUBLIC_SITE_URL` com a URL pública do site (ex.: `https://teu-dominio.com`) para os metadados gerarem links absolutos corretos ao partilhar o link.
+- Os formulários apenas simulam envio no cliente; ligue a uma API ou serviço quando tiver autenticação e persistência.
+- Para usar apenas imagens locais, substitua as URLs do `next/image` e, se não precisar de domínios externos, pode simplificar `images.remotePatterns` em `next.config.ts`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Licença
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Uso privado do projeto **Sumaq Luna**, salvo indicação em contrário pelo titular dos direitos.

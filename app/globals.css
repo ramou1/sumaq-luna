@@ -1,26 +1,67 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --sumaq-black: #0e0d08;
+  --sumaq-gold-dark: #9f7819;
+  --sumaq-gold-light: #c2a74e;
+  --sumaq-wine: #8b0003;
+  --sumaq-cream: #f5f0e8;
+  --background: var(--sumaq-black);
+  --foreground: var(--sumaq-cream);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-sumaq-black: var(--sumaq-black);
+  --color-sumaq-gold-dark: var(--sumaq-gold-dark);
+  --color-sumaq-gold-light: var(--sumaq-gold-light);
+  --color-sumaq-wine: var(--sumaq-wine);
+  --color-sumaq-cream: var(--sumaq-cream);
+  --font-family-sans: var(--font-cormorant), ui-serif, Georgia, serif;
+  --font-family-serif: var(--font-cinzel), ui-serif, Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--sumaq-black);
+  color: var(--sumaq-cream);
+  font-family: var(--font-cormorant), ui-serif, Georgia, serif;
+}
+
+/* Thin double gold frame (presentation style) */
+.frame-double {
+  box-shadow:
+    inset 0 0 0 1px var(--sumaq-gold-dark),
+    inset 0 0 0 3px var(--sumaq-black),
+    inset 0 0 0 4px color-mix(in srgb, var(--sumaq-gold-light) 55%, transparent);
+}
+
+.glass-panel {
+  background: color-mix(in srgb, var(--sumaq-black) 82%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.input-sumaq {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--sumaq-gold-dark) 70%, transparent);
+  background: color-mix(in srgb, var(--sumaq-black) 65%, transparent);
+  color: var(--sumaq-cream);
+  padding: 0.65rem 1rem;
+  font-size: 1.05rem;
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.input-sumaq::placeholder {
+  color: color-mix(in srgb, var(--sumaq-cream) 45%, transparent);
+}
+
+.input-sumaq:focus {
+  border-color: var(--sumaq-gold-light);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--sumaq-gold-light) 35%, transparent);
 }
