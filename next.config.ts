@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  turbopack: {
+    // Evita que o Turbopack escolha a root errada por causa de múltiplos lockfiles.
+    root: __dirname,
+  },
 };
 
 export default nextConfig;

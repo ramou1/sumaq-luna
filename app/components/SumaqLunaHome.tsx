@@ -1,19 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { addDoc, collection, getDocs, orderBy, query } from "firebase/firestore";
+import { getIdTokenResult, signInWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "@/app/lib/firebase/client";
 
-const navLinks = [
-  { href: "#inicio", label: "Inicio" },
-  { href: "#vision", label: "Visión" },
-  { href: "#cultura", label: "Cultura" },
-  { href: "#esencia", label: "Esencia" },
-  { href: "#regiones", label: "Regiones" },
-  { href: "#legado", label: "Legado" },
-  { href: "#enoturismo", label: "Enoturismo" },
-  { href: "#registro", label: "Registro" },
-] as const;
+import { AdminModal } from "@/app/components/modals/AdminModal";
+import { LoginModal } from "@/app/components/modals/LoginModal";
+import { RegisterModal } from "@/app/components/modals/RegisterModal";
+import { SumaqLunaHeader } from "@/app/components/SumaqLunaHeader";
 
 function Diamond() {
   return (
@@ -80,6 +76,20 @@ export function SumaqLunaHome() {
   const [registerOpen, setRegisterOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [loginSubmitting, setLoginSubmitting] = useState(false);
+  const [adminListOpen, setAdminListOpen] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminSupporters, setAdminSupporters] = useState<
+    Array<{
+      id: string;
+      nombre: string;
+      telefono: string;
+      email: string;
+      pais: string;
+      createdAt?: { toDate: () => Date };
+    }>
+  >([]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -88,117 +98,148 @@ export function SumaqLunaHome() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    if (!adminListOpen) return;
+
+    (async () => {
+      setAdminLoading(true);
+      try {
+        const q = query(
+          collection(db, "supporters"),
+          orderBy("createdAt", "desc")
+        );
+        const snap = await getDocs(q);
+        const items = snap.docs.map((d) => {
+          const data = d.data() as Partial<{
+            nombre: string;
+            telefono: string;
+            email: string;
+            pais: string;
+            createdAt: { toDate: () => Date };
+          }>;
+          return {
+            id: d.id,
+            nombre: String(data.nombre ?? ""),
+            telefono: String(data.telefono ?? ""),
+            email: String(data.email ?? ""),
+            pais: String(data.pais ?? ""),
+            createdAt: data.createdAt,
+          };
+        });
+        setAdminSupporters(items);
+      } catch {
+        alert(
+          "No se pudo cargar la lista. Verifica que tu cuenta tenga permisos de administrador."
+        );
+      } finally {
+        setAdminLoading(false);
+      }
+    })();
+  }, [adminListOpen]);
+
   const closeMobile = useCallback(() => setMobileOpen(false), []);
+
+  const submitSupporter = async (
+    e: FormEvent<HTMLFormElement>,
+    opts?: { closeAfterSuccess?: boolean }
+  ) => {
+    e.preventDefault();
+    if (formSubmitting) return;
+
+    const fd = new FormData(e.currentTarget);
+    const nombre = String(fd.get("nombre") ?? "").trim();
+    const telefono = String(fd.get("telefono") ?? "").trim();
+    const email = String(fd.get("email") ?? "").trim();
+    const pais = String(fd.get("pais") ?? "").trim();
+
+    if (!nombre || !telefono || !email || !pais) {
+      alert("Por favor completa todos los campos.");
+      return;
+    }
+
+    setFormSubmitting(true);
+    try {
+      await addDoc(collection(db, "supporters"), {
+        nombre,
+        telefono,
+        email,
+        pais,
+        createdAt: new Date(),
+      });
+
+      if (opts?.closeAfterSuccess) setRegisterOpen(false);
+      alert("Gracias. Tu solicitud fue enviada correctamente.");
+    } catch {
+      alert(
+        "No se pudo enviar la solicitud. Verifica tu conexión o inténtalo de nuevo."
+      );
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
+
+  const submitLogin = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (loginSubmitting) return;
+
+    const fd = new FormData(e.currentTarget);
+    const email = String(fd.get("login-email") ?? "").trim();
+    const password = String(fd.get("password") ?? "");
+
+    if (!email || !password) {
+      alert("Ingresa tu correo y contraseña.");
+      return;
+    }
+
+    setLoginSubmitting(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error("No se pudo obtener la sesión actual.");
+      }
+      const tokenResult = await getIdTokenResult(user);
+      const claims = tokenResult.claims as Record<string, unknown>;
+      const isAdmin = claims.admin === true;
+
+      setLoginOpen(false);
+      if (isAdmin) {
+        setAdminListOpen(true);
+      } else {
+        alert("No tienes permisos de administrador para ver la lista.");
+      }
+    } catch {
+      alert("No se pudo iniciar sesión. Revisa tus credenciales.");
+    } finally {
+      setLoginSubmitting(false);
+    }
+  };
+
+  const formatCreatedAt = (value?: { toDate: () => Date }) => {
+    if (!value) return "";
+    try {
+      return value.toDate().toLocaleString("es-ES");
+    } catch {
+      return "";
+    }
+  };
 
   return (
     <div className="relative min-h-screen bg-sumaq-black text-sumaq-cream">
-      <header
-        className={`fixed inset-x-0 top-0 z-50 border-b transition-[background-color,backdrop-filter,border-color] duration-300 ${
-          scrolled
-            ? "border-sumaq-gold-dark/40 bg-sumaq-black/95 backdrop-blur-md"
-            : "border-transparent bg-transparent"
-        }`}
-      >
-        <div className="mx-auto flex min-w-0 max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:gap-4 md:flex-nowrap md:justify-normal md:px-6 md:py-4">
-          <Link
-            href="#inicio"
-            className="order-1 flex min-w-0 shrink-0 items-center"
-            onClick={closeMobile}
-          >
-            <Image
-              src="/images/logo-sumaq.png"
-              alt="Sumaq Luna"
-              width={320}
-              height={128}
-              className="h-14 w-auto max-w-[min(100%,220px)] object-contain sm:max-w-none sm:h-[4.5rem] md:h-24 lg:h-28 xl:h-32"
-              priority
-              sizes="(max-width: 640px) 180px, (max-width: 768px) 220px, (max-width: 1024px) 260px, 300px"
-            />
-          </Link>
-
-          <nav
-            className="font-serif text-sumaq-gold-dark order-3 hidden min-w-0 basis-full md:order-2 md:block md:basis-0 md:flex-1"
-            aria-label="Principal"
-          >
-            <div className="w-full min-w-0">
-              <ul className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2 sm:gap-x-3 lg:gap-x-4">
-                {navLinks.map(({ href, label }) => (
-                  <li key={href} className="shrink-0">
-                    <a
-                      href={href}
-                      className="hover:text-sumaq-gold-light inline-block border-b border-transparent pb-0.5 text-[9px] font-medium uppercase tracking-[0.12em] transition-colors hover:border-sumaq-gold-light/50 lg:text-[10px] lg:tracking-[0.16em] xl:text-[11px] xl:tracking-[0.18em]"
-                    >
-                      {label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </nav>
-
-          <div className="order-2 flex min-w-0 shrink-0 items-center justify-end gap-2 sm:gap-2 md:order-3 md:gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                setLoginOpen(true);
-                setMobileOpen(false);
-              }}
-              className="font-serif hidden whitespace-nowrap text-left text-[10px] uppercase tracking-[0.14em] text-sumaq-gold-light/95 underline-offset-4 transition-colors hover:text-sumaq-cream hover:underline md:inline-block lg:text-[11px] lg:tracking-[0.16em]"
-            >
-              Iniciar sesión
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setRegisterOpen(true);
-                setMobileOpen(false);
-              }}
-              className="font-serif whitespace-nowrap rounded-sm border border-sumaq-gold-dark/80 bg-sumaq-wine/95 px-2.5 py-2 text-[9px] font-semibold uppercase leading-tight tracking-[0.1em] text-sumaq-cream shadow-[0_0_20px_rgba(139,0,3,0.25)] transition hover:bg-sumaq-wine hover:shadow-[0_0_28px_rgba(194,167,78,0.15)] sm:px-3 sm:text-[10px] sm:tracking-[0.12em] lg:px-4 lg:text-[11px]"
-            >
-              Quiero ser embajador
-            </button>
-            <button
-              type="button"
-              className="font-serif border border-sumaq-gold-dark/50 px-2 py-2 text-[10px] uppercase tracking-wider text-sumaq-gold-dark md:hidden"
-              aria-expanded={mobileOpen}
-              aria-controls="mobile-nav"
-              onClick={() => setMobileOpen((v) => !v)}
-            >
-              Menú
-            </button>
-          </div>
-        </div>
-
-        {mobileOpen ? (
-          <div
-            id="mobile-nav"
-            className="font-serif border-t border-sumaq-gold-dark/30 bg-sumaq-black/98 px-4 py-4 md:hidden"
-          >
-            <div className="flex flex-col gap-3 text-center text-xs uppercase tracking-[0.2em] text-sumaq-gold-dark">
-              {navLinks.map(({ href, label }) => (
-                <a
-                  key={href}
-                  href={href}
-                  className="py-1 hover:text-sumaq-gold-light"
-                  onClick={closeMobile}
-                >
-                  {label}
-                </a>
-              ))}
-              <button
-                type="button"
-                className="py-2 text-sumaq-gold-light/90"
-                onClick={() => {
-                  setLoginOpen(true);
-                  setMobileOpen(false);
-                }}
-              >
-                Iniciar sesión
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </header>
+      <SumaqLunaHeader
+        scrolled={scrolled}
+        mobileOpen={mobileOpen}
+        onToggleMobile={() => setMobileOpen((v) => !v)}
+        onCloseMobile={closeMobile}
+        onOpenLogin={() => {
+          setLoginOpen(true);
+          setMobileOpen(false);
+        }}
+        onOpenRegister={() => {
+          setRegisterOpen(true);
+          setMobileOpen(false);
+        }}
+      />
 
       <main>
         {/* Hero */}
@@ -516,10 +557,7 @@ export function SumaqLunaHome() {
               </p>
               <form
                 className="glass-panel mx-auto mt-10 max-w-md space-y-4 border border-sumaq-gold-dark/40 p-8"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  alert("Gracias. Nos pondremos en contacto pronto.");
-                }}
+                onSubmit={(e) => submitSupporter(e)}
               >
                 <div>
                   <label htmlFor="nombre" className="sr-only">
@@ -578,6 +616,7 @@ export function SumaqLunaHome() {
                 <button
                   type="submit"
                   className="font-serif w-full border border-sumaq-gold-dark bg-sumaq-wine py-3 text-xs font-semibold uppercase tracking-[0.2em] text-sumaq-cream transition hover:bg-[#a00004] hover:shadow-[0_0_24px_rgba(194,167,78,0.12)]"
+                  disabled={formSubmitting}
                 >
                   Enviar solicitud
                 </button>
@@ -594,141 +633,29 @@ export function SumaqLunaHome() {
         <p className="mt-2">© {new Date().getFullYear()} Todos los derechos reservados.</p>
       </footer>
 
-      {/* Modal registro */}
       {registerOpen ? (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-sumaq-black/75 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="register-title"
-        >
-          <div className="frame-double relative max-h-[90vh] w-full max-w-md overflow-y-auto border border-sumaq-gold-dark/30 bg-sumaq-black/95 p-6 shadow-2xl md:p-8">
-            <button
-              type="button"
-              className="absolute right-4 top-4 text-sumaq-gold-dark hover:text-sumaq-cream"
-              onClick={() => setRegisterOpen(false)}
-              aria-label="Cerrar"
-            >
-              ✕
-            </button>
-            <h2
-              id="register-title"
-              className="font-serif pr-8 text-lg font-semibold uppercase tracking-[0.18em] text-sumaq-gold-dark"
-            >
-              Quiero ser embajador
-            </h2>
-            <p className="mt-2 text-sumaq-cream/75">
-              Completa tus datos para unirte a la hermandad Sumaq Luna.
-            </p>
-            <form
-              className="mt-6 space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setRegisterOpen(false);
-                alert("Gracias por tu interés. Te contactaremos pronto.");
-              }}
-            >
-              <input
-                name="nombre"
-                required
-                placeholder="Nombre completo"
-                className="input-sumaq"
-                autoComplete="name"
-              />
-              <input
-                name="telefono"
-                type="tel"
-                required
-                placeholder="Teléfono"
-                className="input-sumaq"
-                autoComplete="tel"
-              />
-              <input
-                name="email"
-                type="email"
-                required
-                placeholder="Correo electrónico"
-                className="input-sumaq"
-                autoComplete="email"
-              />
-              <input
-                name="pais"
-                required
-                placeholder="País"
-                className="input-sumaq"
-                autoComplete="country-name"
-              />
-              <button
-                type="submit"
-                className="font-serif w-full border border-sumaq-gold-dark bg-sumaq-wine py-3 text-xs font-semibold uppercase tracking-[0.18em] text-sumaq-cream transition hover:bg-[#a00004]"
-              >
-                Enviar
-              </button>
-            </form>
-          </div>
-        </div>
+        <RegisterModal
+          onClose={() => setRegisterOpen(false)}
+          onSubmit={(e) => submitSupporter(e, { closeAfterSuccess: true })}
+          formSubmitting={formSubmitting}
+        />
       ) : null}
 
-      {/* Modal login (front-end only) */}
       {loginOpen ? (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-sumaq-black/75 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="login-title"
-        >
-          <div className="frame-double relative w-full max-w-md border border-sumaq-gold-dark/30 bg-sumaq-black/95 p-6 shadow-2xl md:p-8">
-            <button
-              type="button"
-              className="absolute right-4 top-4 text-sumaq-gold-dark hover:text-sumaq-cream"
-              onClick={() => setLoginOpen(false)}
-              aria-label="Cerrar"
-            >
-              ✕
-            </button>
-            <h2
-              id="login-title"
-              className="font-serif pr-8 text-lg font-semibold uppercase tracking-[0.18em] text-sumaq-gold-dark"
-            >
-              Iniciar sesión
-            </h2>
-            <p className="mt-2 text-sm text-sumaq-cream/70">
-              Acceso para embajadores y socios. La autenticación se conectará
-              próximamente.
-            </p>
-            <form
-              className="mt-6 space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setLoginOpen(false);
-                alert("Función de acceso en desarrollo.");
-              }}
-            >
-              <input
-                name="login-email"
-                type="email"
-                required
-                placeholder="Correo electrónico"
-                className="input-sumaq"
-                autoComplete="email"
-              />
-              <input
-                name="password"
-                type="password"
-                required
-                placeholder="Contraseña"
-                className="input-sumaq"
-                autoComplete="current-password"
-              />
-              <button
-                type="submit"
-                className="font-serif w-full border border-sumaq-gold-dark/80 bg-transparent py-3 text-xs font-semibold uppercase tracking-[0.18em] text-sumaq-gold-light transition hover:border-sumaq-gold-light hover:bg-sumaq-gold-dark/15"
-              >
-                Entrar
-              </button>
-            </form>
-          </div>
-        </div>
+        <LoginModal
+          onClose={() => setLoginOpen(false)}
+          onSubmit={(e) => submitLogin(e)}
+          loginSubmitting={loginSubmitting}
+        />
+      ) : null}
+
+      {adminListOpen ? (
+        <AdminModal
+          onClose={() => setAdminListOpen(false)}
+          adminLoading={adminLoading}
+          adminSupporters={adminSupporters}
+          formatCreatedAt={formatCreatedAt}
+        />
       ) : null}
     </div>
   );

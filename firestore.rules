@@ -1,0 +1,28 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /supporters/{docId} {
+      // Cadastro público: permite criar documentos apenas com campos válidos e tamanhos razoáveis.
+      allow create: if
+        request.resource.data.nombre is string &&
+        request.resource.data.telefono is string &&
+        request.resource.data.email is string &&
+        request.resource.data.pais is string &&
+        request.resource.data.nombre.size() > 1 &&
+        request.resource.data.nombre.size() <= 80 &&
+        request.resource.data.telefono.size() > 3 &&
+        request.resource.data.telefono.size() <= 40 &&
+        request.resource.data.email.size() <= 120 &&
+        request.resource.data.pais.size() > 1 &&
+        request.resource.data.pais.size() <= 60;
+
+      // Leitura só para admin via Custom Claims.
+      allow read: if request.auth != null && request.auth.token.admin == true;
+
+      // Protege update/delete (ajuste se quiser workflows administrativos).
+      allow update, delete: if false;
+    }
+  }
+}
+
