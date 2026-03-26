@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { addDoc, collection, getDocs, orderBy, query } from "firebase/firestore";
 import { getIdTokenResult, signInWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "@/app/lib/firebase/client";
+import { getFirebaseAuthDb } from "@/app/lib/firebase/client";
 
 import { AdminModal } from "@/app/components/modals/AdminModal";
 import { LoginModal } from "@/app/components/modals/LoginModal";
@@ -104,6 +104,7 @@ export function SumaqLunaHome() {
     (async () => {
       setAdminLoading(true);
       try {
+          const { db } = getFirebaseAuthDb();
         const q = query(
           collection(db, "supporters"),
           orderBy("createdAt", "desc")
@@ -159,6 +160,7 @@ export function SumaqLunaHome() {
 
     setFormSubmitting(true);
     try {
+      const { db } = getFirebaseAuthDb();
       await addDoc(collection(db, "supporters"), {
         nombre,
         telefono,
@@ -193,6 +195,7 @@ export function SumaqLunaHome() {
 
     setLoginSubmitting(true);
     try {
+      const { auth } = getFirebaseAuthDb();
       await signInWithEmailAndPassword(auth, email, password);
       const user = auth.currentUser;
       if (!user) {

@@ -1,44 +1,63 @@
 "use client";
 
-import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getApps, initializeApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
-// IMPORTANTE:
-// Em código "use client", o Next só injeta (substitui) envs NEXT_PUBLIC_ quando as chaves
-// aparecem literalmente. Evitamos indexação dinâmica (process.env[name]) para não dar undefined.
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY as string,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN as string,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID as string,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET as string,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID as string,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID as string,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-};
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let db: Firestore | null = null;
 
-// Guard (apenas em caso improvável de env não injetada).
-if (
-  !firebaseConfig.apiKey ||
-  !firebaseConfig.authDomain ||
-  !firebaseConfig.projectId ||
-  !firebaseConfig.storageBucket ||
-  !firebaseConfig.messagingSenderId ||
-  !firebaseConfig.appId
-) {
-  throw new Error(
-    "Faltou uma ou mais variáveis NEXT_PUBLIC_FIREBASE_* no .env.local."
-  );
+function readFirebaseConfig() {
+  // IMPORTANT: em `use client`, envs `NEXT_PUBLIC_*` são injetadas no bundle, mas
+  // para evitar crash no build/prerender, retornamos `null` se não houver config.
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  const messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+  const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+  const measurementId = process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID;
+
+  if (
+    !apiKey ||
+    !authDomain ||
+    !projectId ||
+    !storageBucket ||
+    !messagingSenderId ||
+    !appId
+  ) {
+    return null;
+  }
+
+  return {
+    apiKey,
+    authDomain,
+    projectId,
+    storageBucket,
+    messagingSenderId,
+    appId,
+    measurementId,
+  };
 }
 
-function getFirebaseApp() {
+export function getFirebaseAuthDb() {
+  if (auth && db) {
+    return { auth, db };
+  }
+
+  const config = readFirebaseConfig();
+  if (!config) {
+    throw new Error(
+      "Faltan variáveis de ambiente NEXT_PUBLIC_FIREBASE_* (no .env.local ou nas Environment Variables da Vercel)."
+    );
+  }
+
   const existing = getApps();
-  if (existing.length > 0) return existing[0];
-  return initializeApp(firebaseConfig);
+  app = existing.length > 0 ? existing[0] : initializeApp(config);
+  auth = getAuth(app);
+  db = getFirestore(app);
+
+  return { auth, db };
 }
-
-const app = getFirebaseApp();
-
-export const auth = getAuth(app);
-export const db = getFirestore(app);
 
