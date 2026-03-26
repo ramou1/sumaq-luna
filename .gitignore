@@ -33,6 +33,11 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# firebase / google service account keys (never commit)
+*serviceAccount*.json
+*firebase*key*.json
+sumaq-luna-firebase-key.json
+
 # vercel
 .vercel
 
