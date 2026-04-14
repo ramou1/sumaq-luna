@@ -10,6 +10,7 @@ import { AdminModal } from "@/app/components/modals/AdminModal";
 import { LoginModal } from "@/app/components/modals/LoginModal";
 import { RegisterModal } from "@/app/components/modals/RegisterModal";
 import { SumaqLunaHeader } from "@/app/components/SumaqLunaHeader";
+import { EmbassadorInfoSlider } from "@/app/components/EmbassadorInfoSlider";
 
 function Diamond() {
   return (
@@ -87,6 +88,7 @@ export function SumaqLunaHome() {
       telefono: string;
       email: string;
       pais: string;
+      investimento?: "1000" | "2000" | "5000";
       createdAt?: { toDate: () => Date };
     }>
   >([]);
@@ -116,6 +118,7 @@ export function SumaqLunaHome() {
             telefono: string;
             email: string;
             pais: string;
+            investimento: "1000" | "2000" | "5000";
             createdAt: { toDate: () => Date };
           }>;
           return {
@@ -124,6 +127,12 @@ export function SumaqLunaHome() {
             telefono: String(data.telefono ?? ""),
             email: String(data.email ?? ""),
             pais: String(data.pais ?? ""),
+            investimento:
+              data.investimento === "1000" ||
+              data.investimento === "2000" ||
+              data.investimento === "5000"
+                ? data.investimento
+                : undefined,
             createdAt: data.createdAt,
           };
         });
@@ -152,8 +161,11 @@ export function SumaqLunaHome() {
     const telefono = String(fd.get("telefono") ?? "").trim();
     const email = String(fd.get("email") ?? "").trim();
     const pais = String(fd.get("pais") ?? "").trim();
+    const senha = String(fd.get("senha") ?? "");
+    const investimento = String(fd.get("investimento") ?? "").trim();
+    const investimentoValido = ["1000", "2000", "5000"].includes(investimento);
 
-    if (!nombre || !telefono || !email || !pais) {
+    if (!nombre || !telefono || !email || !pais || !senha || !investimentoValido) {
       alert("Por favor completa todos los campos.");
       return;
     }
@@ -166,6 +178,8 @@ export function SumaqLunaHome() {
         telefono,
         email,
         pais,
+        senha,
+        investimento,
         createdAt: new Date(),
       });
 
@@ -251,13 +265,13 @@ export function SumaqLunaHome() {
           className="relative flex min-h-[100svh] items-center justify-center overflow-hidden pt-24 md:pt-28 lg:pt-32"
         >
           <div className="absolute inset-0">
-            <Image
-              src="https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?q=80&w=2000&auto=format&fit=crop"
-              alt=""
-              fill
-              className="object-cover object-center opacity-55"
-              priority
-              sizes="100vw"
+            <video
+              className="h-full w-full object-cover object-center opacity-60"
+              src="/videos/video-sumaq.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
             />
             <div className="absolute inset-0 bg-gradient-to-b from-sumaq-black via-sumaq-black/80 to-sumaq-black" />
           </div>
@@ -558,72 +572,108 @@ export function SumaqLunaHome() {
                 Regístrate como embajador o mecenas y sé parte de la expansión
                 de una marca icónica.
               </p>
-              <form
-                className="glass-panel mx-auto mt-10 max-w-md space-y-4 border border-sumaq-gold-dark/40 p-8"
-                onSubmit={(e) => submitSupporter(e)}
-              >
-                <div>
-                  <label htmlFor="nombre" className="sr-only">
-                    Nombre
-                  </label>
-                  <input
-                    id="nombre"
-                    name="nombre"
-                    required
-                    placeholder="Nombre completo"
-                    className="input-sumaq"
-                    autoComplete="name"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="telefono" className="sr-only">
-                    Teléfono
-                  </label>
-                  <input
-                    id="telefono"
-                    name="telefono"
-                    type="tel"
-                    required
-                    placeholder="Teléfono"
-                    className="input-sumaq"
-                    autoComplete="tel"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="email" className="sr-only">
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    placeholder="Correo electrónico"
-                    className="input-sumaq"
-                    autoComplete="email"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="pais" className="sr-only">
-                    País
-                  </label>
-                  <input
-                    id="pais"
-                    name="pais"
-                    required
-                    placeholder="País"
-                    className="input-sumaq"
-                    autoComplete="country-name"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="font-serif w-full border border-sumaq-gold-dark bg-sumaq-wine py-3 text-xs font-semibold uppercase tracking-[0.2em] text-sumaq-cream transition hover:bg-[#a00004] hover:shadow-[0_0_24px_rgba(194,167,78,0.12)]"
-                  disabled={formSubmitting}
+              <div className="mx-auto mt-10 grid max-w-5xl gap-8 md:grid-cols-2 md:items-start">
+                <EmbassadorInfoSlider />
+                <form
+                  className="glass-panel space-y-4 border border-sumaq-gold-dark/40 p-8"
+                  onSubmit={(e) => submitSupporter(e)}
                 >
-                  Enviar solicitud
-                </button>
-              </form>
+                  <div>
+                    <label htmlFor="nombre" className="sr-only">
+                      Nombre
+                    </label>
+                    <input
+                      id="nombre"
+                      name="nombre"
+                      required
+                      placeholder="Nombre completo"
+                      className="input-sumaq"
+                      autoComplete="name"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="telefono" className="sr-only">
+                      Teléfono
+                    </label>
+                    <input
+                      id="telefono"
+                      name="telefono"
+                      type="tel"
+                      required
+                      placeholder="Teléfono"
+                      className="input-sumaq"
+                      autoComplete="tel"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="pais" className="sr-only">
+                      País
+                    </label>
+                    <input
+                      id="pais"
+                      name="pais"
+                      required
+                      placeholder="País"
+                      className="input-sumaq"
+                      autoComplete="country-name"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="investimento" className="sr-only">
+                      Valor de inversión
+                    </label>
+                    <select
+                      id="investimento"
+                      name="investimento"
+                      required
+                      className="input-sumaq"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>
+                        Selecciona valor de inversión
+                      </option>
+                      <option value="1000">1000</option>
+                      <option value="2000">2000</option>
+                      <option value="5000">5000</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="email" className="sr-only">
+                      Email
+                    </label>
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      placeholder="Correo electrónico"
+                      className="input-sumaq"
+                      autoComplete="email"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="senha" className="sr-only">
+                      Senha
+                    </label>
+                    <input
+                      id="senha"
+                      name="senha"
+                      type="password"
+                      required
+                      placeholder="Senha"
+                      className="input-sumaq"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="font-serif w-full border border-sumaq-gold-dark bg-sumaq-wine py-3 text-xs font-semibold uppercase tracking-[0.2em] text-sumaq-cream transition hover:bg-[#a00004] hover:shadow-[0_0_24px_rgba(194,167,78,0.12)]"
+                    disabled={formSubmitting}
+                  >
+                    Enviar solicitud
+                  </button>
+                </form>
+              </div>
             </section>
           </div>
         </div>
