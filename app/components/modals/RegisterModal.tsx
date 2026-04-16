@@ -7,10 +7,12 @@ export function RegisterModal({
   onClose,
   onSubmit,
   formSubmitting,
+  formMessage,
 }: {
   onClose: () => void;
   onSubmit: (e: FormEvent<HTMLFormElement>) => void;
   formSubmitting: boolean;
+  formMessage?: string;
 }) {
   return (
     <div
@@ -97,6 +99,11 @@ export function RegisterModal({
             >
               Enviar
             </button>
+            {formMessage ? (
+              <p className="text-sm text-sumaq-gold-light" role="status">
+                {formMessage}
+              </p>
+            ) : null}
           </form>
           <EmbassadorInfoSlider />
         </div>

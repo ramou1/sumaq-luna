@@ -105,6 +105,7 @@ export function SumaqLunaHome() {
     }>
   >([]);
   const [loginError, setLoginError] = useState("");
+  const [registerMessage, setRegisterMessage] = useState("");
   const [userStatusOpen, setUserStatusOpen] = useState(false);
   const [currentUserName, setCurrentUserName] = useState("");
   const [currentUserStage, setCurrentUserStage] =
@@ -173,12 +174,31 @@ export function SumaqLunaHome() {
 
   const closeMobile = useCallback(() => setMobileOpen(false), []);
 
+  const getFriendlyErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error) {
+      if (error.message.includes("NEXT_PUBLIC_FIREBASE_")) {
+        return "Configuração do Firebase ausente no deploy. Defina as variáveis NEXT_PUBLIC_FIREBASE_* na Vercel.";
+      }
+      if (error.message.includes("auth/invalid-credential")) {
+        return "Credenciais inválidas. Verifique e-mail e senha.";
+      }
+      if (error.message.includes("auth/user-not-found")) {
+        return "Usuário não encontrado.";
+      }
+      if (error.message.includes("auth/wrong-password")) {
+        return "Senha incorreta.";
+      }
+    }
+    return fallback;
+  };
+
   const submitSupporter = async (
     e: FormEvent<HTMLFormElement>,
     opts?: { closeAfterSuccess?: boolean }
   ) => {
     e.preventDefault();
     if (formSubmitting) return;
+    setRegisterMessage("");
 
     const fd = new FormData(e.currentTarget);
     const nombre = String(fd.get("nombre") ?? "").trim();
@@ -190,7 +210,7 @@ export function SumaqLunaHome() {
     const investimentoValido = ["1000", "2000", "5000"].includes(investimento);
 
     if (!nombre || !telefono || !email || !pais || !senha || !investimentoValido) {
-      alert("Por favor completa todos los campos.");
+      setRegisterMessage("Por favor completa todos los campos.");
       return;
     }
 
@@ -209,10 +229,13 @@ export function SumaqLunaHome() {
       });
 
       if (opts?.closeAfterSuccess) setRegisterOpen(false);
-      alert("Gracias. Tu solicitud fue enviada correctamente.");
-    } catch {
-      alert(
-        "No se pudo enviar la solicitud. Verifica tu conexión o inténtalo de nuevo."
+      setRegisterMessage("Solicitud enviada correctamente.");
+    } catch (error) {
+      setRegisterMessage(
+        getFriendlyErrorMessage(
+          error,
+          "No se pudo enviar la solicitud. Verifica tu conexión o inténtalo de nuevo."
+        )
       );
     } finally {
       setFormSubmitting(false);
@@ -275,8 +298,13 @@ export function SumaqLunaHome() {
         );
         setUserStatusOpen(true);
       }
-    } catch {
-      setLoginError("No se pudo iniciar sesión. Revisa tus credenciales.");
+    } catch (error) {
+      setLoginError(
+        getFriendlyErrorMessage(
+          error,
+          "No se pudo iniciar sesión. Revisa tus credenciales."
+        )
+      );
     } finally {
       setLoginSubmitting(false);
     }
@@ -304,6 +332,7 @@ export function SumaqLunaHome() {
           setMobileOpen(false);
         }}
         onOpenRegister={() => {
+          setRegisterMessage("");
           setRegisterOpen(true);
           setMobileOpen(false);
         }}
@@ -723,6 +752,11 @@ export function SumaqLunaHome() {
                   >
                     Enviar solicitud
                   </button>
+                  {registerMessage ? (
+                    <p className="text-sm text-sumaq-gold-light" role="status">
+                      {registerMessage}
+                    </p>
+                  ) : null}
                 </form>
               </div>
             </section>
@@ -742,6 +776,7 @@ export function SumaqLunaHome() {
           onClose={() => setRegisterOpen(false)}
           onSubmit={(e) => submitSupporter(e, { closeAfterSuccess: true })}
           formSubmitting={formSubmitting}
+          formMessage={registerMessage}
         />
       ) : null}
 
