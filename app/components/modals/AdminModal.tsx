@@ -6,6 +6,7 @@ type SupporterRow = {
   telefono: string;
   email: string;
   pais: string;
+  stage: "Em Validação" | "Pagamento" | "Proceso Aprobado";
   createdAt?: { toDate: () => Date };
 };
 
@@ -73,6 +74,12 @@ export function AdminModal({
                     <th className="border-b border-sumaq-gold-dark/25 py-3 pr-3">
                       País
                     </th>
+                    <th className="border-b border-sumaq-gold-dark/25 py-3 pr-3">
+                      Etapa
+                    </th>
+                    <th className="border-b border-sumaq-gold-dark/25 py-3 pr-3">
+                      Doc
+                    </th>
                     <th className="border-b border-sumaq-gold-dark/25 py-3">
                       Fecha
                     </th>
@@ -95,6 +102,24 @@ export function AdminModal({
                       </td>
                       <td className="border-b border-sumaq-gold-dark/15 py-3 pr-3">
                         {item.pais}
+                      </td>
+                      <td className="border-b border-sumaq-gold-dark/15 py-3 pr-3">
+                        {item.stage}
+                      </td>
+                      <td className="border-b border-sumaq-gold-dark/15 py-3 pr-3">
+                        {item.stage === "Proceso Aprobado" ? (
+                          <button
+                            type="button"
+                            className="text-sumaq-gold-light opacity-85"
+                            disabled
+                            title="Download será habilitado futuramente"
+                            aria-label="Download pendente"
+                          >
+                            ⬇
+                          </button>
+                        ) : (
+                          <span className="text-sumaq-cream/40">—</span>
+                        )}
                       </td>
                       <td className="border-b border-sumaq-gold-dark/15 py-3">
                         {formatCreatedAt(item.createdAt)}

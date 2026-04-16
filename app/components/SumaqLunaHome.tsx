@@ -2,15 +2,26 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { addDoc, collection, getDocs, orderBy, query } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  where,
+} from "firebase/firestore";
 import { getIdTokenResult, signInWithEmailAndPassword } from "firebase/auth";
 import { getFirebaseAuthDb } from "@/app/lib/firebase/client";
 
 import { AdminModal } from "@/app/components/modals/AdminModal";
 import { LoginModal } from "@/app/components/modals/LoginModal";
 import { RegisterModal } from "@/app/components/modals/RegisterModal";
+import { UserStatusModal } from "@/app/components/modals/UserStatusModal";
 import { SumaqLunaHeader } from "@/app/components/SumaqLunaHeader";
 import { EmbassadorInfoSlider } from "@/app/components/EmbassadorInfoSlider";
+
+type SupporterStage = "Em Validação" | "Pagamento" | "Proceso Aprobado";
 
 function Diamond() {
   return (
@@ -89,9 +100,15 @@ export function SumaqLunaHome() {
       email: string;
       pais: string;
       investimento?: "1000" | "2000" | "5000";
+      stage: SupporterStage;
       createdAt?: { toDate: () => Date };
     }>
   >([]);
+  const [loginError, setLoginError] = useState("");
+  const [userStatusOpen, setUserStatusOpen] = useState(false);
+  const [currentUserName, setCurrentUserName] = useState("");
+  const [currentUserStage, setCurrentUserStage] =
+    useState<SupporterStage>("Em Validação");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -119,6 +136,7 @@ export function SumaqLunaHome() {
             email: string;
             pais: string;
             investimento: "1000" | "2000" | "5000";
+            stage: SupporterStage;
             createdAt: { toDate: () => Date };
           }>;
           return {
@@ -133,13 +151,19 @@ export function SumaqLunaHome() {
               data.investimento === "5000"
                 ? data.investimento
                 : undefined,
+            stage:
+              data.stage === "Em Validação" ||
+              data.stage === "Pagamento" ||
+              data.stage === "Proceso Aprobado"
+                ? data.stage
+                : "Em Validação",
             createdAt: data.createdAt,
           };
         });
         setAdminSupporters(items);
       } catch {
-        alert(
-          "No se pudo cargar la lista. Verifica que tu cuenta tenga permisos de administrador."
+        setLoginError(
+          "No se pudo cargar el panel de administración. Verifica tus permisos."
         );
       } finally {
         setAdminLoading(false);
@@ -180,6 +204,7 @@ export function SumaqLunaHome() {
         pais,
         senha,
         investimento,
+        stage: "Em Validação",
         createdAt: new Date(),
       });
 
@@ -197,13 +222,14 @@ export function SumaqLunaHome() {
   const submitLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (loginSubmitting) return;
+    setLoginError("");
 
     const fd = new FormData(e.currentTarget);
     const email = String(fd.get("login-email") ?? "").trim();
     const password = String(fd.get("password") ?? "");
 
     if (!email || !password) {
-      alert("Ingresa tu correo y contraseña.");
+      setLoginError("Ingresa tu correo y contraseña.");
       return;
     }
 
@@ -223,10 +249,34 @@ export function SumaqLunaHome() {
       if (isAdmin) {
         setAdminListOpen(true);
       } else {
-        alert("No tienes permisos de administrador para ver la lista.");
+        const { db } = getFirebaseAuthDb();
+        const supporterQuery = query(
+          collection(db, "supporters"),
+          where("email", "==", email),
+          orderBy("createdAt", "desc"),
+          limit(1)
+        );
+        const supporterSnap = await getDocs(supporterQuery);
+        const supporterData = supporterSnap.docs[0]?.data() as
+          | {
+              nombre?: string;
+              stage?: SupporterStage;
+            }
+          | undefined;
+
+        setCurrentUserName(String(supporterData?.nombre ?? ""));
+        const stage = supporterData?.stage;
+        setCurrentUserStage(
+          stage === "Em Validação" ||
+            stage === "Pagamento" ||
+            stage === "Proceso Aprobado"
+            ? stage
+            : "Em Validação"
+        );
+        setUserStatusOpen(true);
       }
     } catch {
-      alert("No se pudo iniciar sesión. Revisa tus credenciales.");
+      setLoginError("No se pudo iniciar sesión. Revisa tus credenciales.");
     } finally {
       setLoginSubmitting(false);
     }
@@ -249,6 +299,7 @@ export function SumaqLunaHome() {
         onToggleMobile={() => setMobileOpen((v) => !v)}
         onCloseMobile={closeMobile}
         onOpenLogin={() => {
+          setLoginError("");
           setLoginOpen(true);
           setMobileOpen(false);
         }}
@@ -699,6 +750,15 @@ export function SumaqLunaHome() {
           onClose={() => setLoginOpen(false)}
           onSubmit={(e) => submitLogin(e)}
           loginSubmitting={loginSubmitting}
+          loginError={loginError}
+        />
+      ) : null}
+
+      {userStatusOpen ? (
+        <UserStatusModal
+          onClose={() => setUserStatusOpen(false)}
+          userName={currentUserName}
+          stage={currentUserStage}
         />
       ) : null}
 

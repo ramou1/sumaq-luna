@@ -1,16 +1,20 @@
 "use client";
 
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
 export function LoginModal({
   onClose,
   onSubmit,
   loginSubmitting,
+  loginError,
 }: {
   onClose: () => void;
   onSubmit: (e: FormEvent<HTMLFormElement>) => void;
   loginSubmitting: boolean;
+  loginError?: string;
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-sumaq-black/75 p-4 backdrop-blur-sm"
@@ -34,8 +38,7 @@ export function LoginModal({
           Iniciar sesión
         </h2>
         <p className="mt-2 text-sm text-sumaq-cream/70">
-          Acceso para embajadores y socios. La autenticación se conectará
-          próximamente.
+          Acceso para embajadores y socios.
         </p>
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <input
@@ -46,14 +49,29 @@ export function LoginModal({
             className="input-sumaq"
             autoComplete="email"
           />
-          <input
-            name="password"
-            type="password"
-            required
-            placeholder="Contraseña"
-            className="input-sumaq"
-            autoComplete="current-password"
-          />
+          <div className="relative">
+            <input
+              name="password"
+              type={showPassword ? "text" : "password"}
+              required
+              placeholder="Contraseña"
+              className="input-sumaq pr-10"
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-sumaq-gold-dark hover:text-sumaq-gold-light"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            >
+              {showPassword ? "🙈" : "👁"}
+            </button>
+          </div>
+          {loginError ? (
+            <p className="text-sm text-[#ff8b8b]" role="alert">
+              {loginError}
+            </p>
+          ) : null}
           <button
             type="submit"
             className="font-serif w-full border border-sumaq-gold-dark/80 bg-transparent py-3 text-xs font-semibold uppercase tracking-[0.18em] text-sumaq-gold-light transition hover:border-sumaq-gold-light hover:bg-sumaq-gold-dark/15"
