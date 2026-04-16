@@ -1,6 +1,6 @@
 "use client";
 
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { EmbassadorInfoSlider } from "@/app/components/EmbassadorInfoSlider";
 
 export function RegisterModal({
@@ -14,6 +14,9 @@ export function RegisterModal({
   formSubmitting: boolean;
   formMessage?: string;
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const [investimentoSelecionado, setInvestimentoSelecionado] = useState("");
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-sumaq-black/75 p-4 backdrop-blur-sm"
@@ -44,6 +47,7 @@ export function RegisterModal({
             <input
               name="nombre"
               required
+              maxLength={40}
               placeholder="Nombre completo"
               className="input-sumaq"
               autoComplete="name"
@@ -52,6 +56,7 @@ export function RegisterModal({
               name="telefono"
               type="tel"
               required
+              maxLength={15}
               placeholder="Teléfono"
               className="input-sumaq"
               autoComplete="tel"
@@ -59,6 +64,7 @@ export function RegisterModal({
             <input
               name="pais"
               required
+              maxLength={30}
               placeholder="País"
               className="input-sumaq"
               autoComplete="country-name"
@@ -67,31 +73,56 @@ export function RegisterModal({
               name="investimento"
               required
               className="input-sumaq"
-              defaultValue=""
+              value={investimentoSelecionado}
+              onChange={(e) => setInvestimentoSelecionado(e.target.value)}
             >
               <option value="" disabled>
                 Selecciona valor de inversión
               </option>
-              <option value="1000">1000</option>
-              <option value="2000">2000</option>
-              <option value="5000">5000</option>
+              <option value="1000">USD 1000</option>
+              <option value="3000">USD 3000</option>
+              <option value="5000">USD 5000</option>
+              <option value="custom">Definir un valor (USD)</option>
             </select>
+            {investimentoSelecionado === "custom" ? (
+              <input
+                name="investimentoCustom"
+                type="number"
+                min="1"
+                step="1"
+                required
+                placeholder="Valor de inversión en USD"
+                className="input-sumaq"
+              />
+            ) : null}
             <input
               name="email"
               type="email"
               required
+              maxLength={40}
               placeholder="Correo electrónico"
               className="input-sumaq"
               autoComplete="email"
             />
-            <input
-              name="senha"
-              type="password"
-              required
-              placeholder="Senha"
-              className="input-sumaq"
-              autoComplete="new-password"
-            />
+            <div className="relative">
+              <input
+                name="senha"
+                type={showPassword ? "text" : "password"}
+                required
+                maxLength={20}
+                placeholder="Senha"
+                className="input-sumaq pr-10"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-sumaq-gold-dark hover:text-sumaq-gold-light"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+              >
+                {showPassword ? "🙈" : "👁"}
+              </button>
+            </div>
             <button
               type="submit"
               className="font-serif w-full border border-sumaq-gold-dark bg-sumaq-wine py-3 text-xs font-semibold uppercase tracking-[0.18em] text-sumaq-cream transition hover:bg-[#a00004]"

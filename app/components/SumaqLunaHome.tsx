@@ -11,7 +11,11 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { getIdTokenResult, signInWithEmailAndPassword } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  getIdTokenResult,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { getFirebaseAuthDb } from "@/app/lib/firebase/client";
 
 import { AdminModal } from "@/app/components/modals/AdminModal";
@@ -99,7 +103,7 @@ export function SumaqLunaHome() {
       telefono: string;
       email: string;
       pais: string;
-      investimento?: "1000" | "2000" | "5000";
+      investimento?: string;
       stage: SupporterStage;
       createdAt?: { toDate: () => Date };
     }>
@@ -110,6 +114,9 @@ export function SumaqLunaHome() {
   const [currentUserName, setCurrentUserName] = useState("");
   const [currentUserStage, setCurrentUserStage] =
     useState<SupporterStage>("Em Validação");
+  const [showSectionPassword, setShowSectionPassword] = useState(false);
+  const [sectionInvestimentoSelecionado, setSectionInvestimentoSelecionado] =
+    useState("");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -136,7 +143,7 @@ export function SumaqLunaHome() {
             telefono: string;
             email: string;
             pais: string;
-            investimento: "1000" | "2000" | "5000";
+            investimento: string;
             stage: SupporterStage;
             createdAt: { toDate: () => Date };
           }>;
@@ -146,12 +153,7 @@ export function SumaqLunaHome() {
             telefono: String(data.telefono ?? ""),
             email: String(data.email ?? ""),
             pais: String(data.pais ?? ""),
-            investimento:
-              data.investimento === "1000" ||
-              data.investimento === "2000" ||
-              data.investimento === "5000"
-                ? data.investimento
-                : undefined,
+            investimento: data.investimento ? String(data.investimento) : undefined,
             stage:
               data.stage === "Em Validação" ||
               data.stage === "Pagamento" ||
@@ -207,7 +209,11 @@ export function SumaqLunaHome() {
     const pais = String(fd.get("pais") ?? "").trim();
     const senha = String(fd.get("senha") ?? "");
     const investimento = String(fd.get("investimento") ?? "").trim();
-    const investimentoValido = ["1000", "2000", "5000"].includes(investimento);
+    const investimentoCustom = String(fd.get("investimentoCustom") ?? "").trim();
+    const investimentoFinal =
+      investimento === "custom" ? investimentoCustom : investimento;
+    const investimentoValido =
+      /^\d+$/.test(investimentoFinal) && Number(investimentoFinal) > 0;
 
     if (!nombre || !telefono || !email || !pais || !senha || !investimentoValido) {
       setRegisterMessage("Por favor completa todos los campos.");
@@ -216,18 +222,22 @@ export function SumaqLunaHome() {
 
     setFormSubmitting(true);
     try {
-      const { db } = getFirebaseAuthDb();
+      const { auth, db } = getFirebaseAuthDb();
+      await createUserWithEmailAndPassword(auth, email, senha);
       await addDoc(collection(db, "supporters"), {
         nombre,
         telefono,
         email,
         pais,
         senha,
-        investimento,
+        investimento: investimentoFinal,
         stage: "Em Validação",
         createdAt: new Date(),
       });
 
+      setCurrentUserName(nombre);
+      setCurrentUserStage("Em Validação");
+      setUserStatusOpen(true);
       if (opts?.closeAfterSuccess) setRegisterOpen(false);
       setRegisterMessage("Solicitud enviada correctamente.");
     } catch (error) {
@@ -666,6 +676,7 @@ export function SumaqLunaHome() {
                       id="nombre"
                       name="nombre"
                       required
+                      maxLength={40}
                       placeholder="Nombre completo"
                       className="input-sumaq"
                       autoComplete="name"
@@ -680,6 +691,7 @@ export function SumaqLunaHome() {
                       name="telefono"
                       type="tel"
                       required
+                      maxLength={15}
                       placeholder="Teléfono"
                       className="input-sumaq"
                       autoComplete="tel"
@@ -693,6 +705,7 @@ export function SumaqLunaHome() {
                       id="pais"
                       name="pais"
                       required
+                      maxLength={30}
                       placeholder="País"
                       className="input-sumaq"
                       autoComplete="country-name"
@@ -707,16 +720,37 @@ export function SumaqLunaHome() {
                       name="investimento"
                       required
                       className="input-sumaq"
-                      defaultValue=""
+                      value={sectionInvestimentoSelecionado}
+                      onChange={(e) =>
+                        setSectionInvestimentoSelecionado(e.target.value)
+                      }
                     >
                       <option value="" disabled>
                         Selecciona valor de inversión
                       </option>
-                      <option value="1000">1000</option>
-                      <option value="2000">2000</option>
-                      <option value="5000">5000</option>
+                      <option value="1000">USD 1000</option>
+                      <option value="3000">USD 3000</option>
+                      <option value="5000">USD 5000</option>
+                      <option value="custom">Definir un valor (USD)</option>
                     </select>
                   </div>
+                  {sectionInvestimentoSelecionado === "custom" ? (
+                    <div>
+                      <label htmlFor="investimentoCustom" className="sr-only">
+                        Valor personalizado
+                      </label>
+                      <input
+                        id="investimentoCustom"
+                        name="investimentoCustom"
+                        type="number"
+                        min="1"
+                        step="1"
+                        required
+                        placeholder="Valor de inversión en USD"
+                        className="input-sumaq"
+                      />
+                    </div>
+                  ) : null}
                   <div>
                     <label htmlFor="email" className="sr-only">
                       Email
@@ -726,24 +760,36 @@ export function SumaqLunaHome() {
                       name="email"
                       type="email"
                       required
+                      maxLength={40}
                       placeholder="Correo electrónico"
                       className="input-sumaq"
                       autoComplete="email"
                     />
                   </div>
-                  <div>
+                  <div className="relative">
                     <label htmlFor="senha" className="sr-only">
                       Senha
                     </label>
                     <input
                       id="senha"
                       name="senha"
-                      type="password"
+                      type={showSectionPassword ? "text" : "password"}
                       required
+                      maxLength={20}
                       placeholder="Senha"
-                      className="input-sumaq"
+                      className="input-sumaq pr-10"
                       autoComplete="new-password"
                     />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-sumaq-gold-dark hover:text-sumaq-gold-light"
+                      onClick={() => setShowSectionPassword((prev) => !prev)}
+                      aria-label={
+                        showSectionPassword ? "Ocultar senha" : "Mostrar senha"
+                      }
+                    >
+                      {showSectionPassword ? "🙈" : "👁"}
+                    </button>
                   </div>
                   <button
                     type="submit"
